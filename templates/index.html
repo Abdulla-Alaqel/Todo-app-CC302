@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>In-Memory Todo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-50 min-h-screen flex items-center justify-center p-6">
+    <div class="w-full max-w-2xl">
+      <div class="bg-white shadow rounded-lg p-6">
+        <h1 class="text-2xl font-semibold mb-4">To‑Do List</h1>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="space-y-2 mb-4">
+              {% for category, msg in messages %}
+                <div class="px-4 py-2 rounded text-sm
+                            {% if category == 'success' %}bg-green-100 text-green-800
+                            {% elif category == 'warning' %}bg-yellow-100 text-yellow-800
+                            {% else %}bg-blue-100 text-blue-800{% endif %}">
+                  {{ msg }}
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        {% if edit_task %}
+        <form action="{{ url_for('edit_task', task_id=edit_task.id) }}" method="post" class="mb-6">
+          <div class="flex gap-2">
+            <input name="title" value="{{ edit_task.title }}" required
+                   class="flex-1 px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-green-300" />
+            <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded">Save</button>
+            <a href="{{ url_for('index') }}" class="bg-gray-100 px-4 py-2 rounded border">Cancel</a>
+          </div>
+        </form>
+        {% endif %}
+
+        <form action="{{ url_for('add_task') }}" method="post" class="mb-6">
+          <div class="flex gap-2">
+            <input name="title" placeholder="Add a new task..." required
+                   class="flex-1 px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+            <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded">Add</button>
+          </div>
+        </form>
+
+        <div class="space-y-2">
+          {% if tasks %}
+            {% for t in tasks %}
+              <div class="flex items-center justify-between p-3 border rounded">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 flex items-center justify-center rounded-full text-white
+                              {% if t.status == 'Completed' %}bg-green-500{% else %}bg-yellow-400{% endif %}">
+                    {{ t.id }}
+                  </div>
+                  <div>
+                    <div class="font-medium">{{ t.title }}</div>
+                    <div class="text-xs mt-0.5 text-gray-500">Status: 
+                      <span class="font-semibold {% if t.status == 'Completed' %}text-green-600{% else %}text-yellow-600{% endif %}">{{ t.status }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <a href="{{ url_for('toggle_task', task_id=t.id) }}" class="text-sm px-3 py-1 rounded border hover:bg-gray-50">Toggle</a>
+                  <a href="{{ url_for('edit_task', task_id=t.id) }}" class="text-sm px-3 py-1 rounded border text-blue-600 hover:bg-blue-50">Edit</a>
+                  <a href="{{ url_for('delete_task', task_id=t.id) }}" class="text-sm px-3 py-1 rounded border text-red-600 hover:bg-red-50">Delete</a>
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div class="text-center text-gray-500 py-8">No tasks yet — add your first task above.</div>
+          {% endif %}
+        </div>
+      </div>
+      <p class="text-center text-xs text-gray-400 mt-3">In-memory demo — no database used.</p>
+    </div>
+  </body>
+</html>
