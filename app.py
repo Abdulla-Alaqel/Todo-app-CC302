@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, session
 
 app = Flask(__name__)
 app.secret_key = "dev-secret-key"
@@ -16,7 +16,8 @@ def _next_id():
 
 @app.route("/", methods=["GET"])
 def index():
-    return render_template("index.html", tasks=tasks)
+    theme = session.get('theme', 'light')
+    return render_template("index.html", tasks=tasks, theme=theme)
 
 
 @app.route("/add", methods=["POST"])
@@ -39,6 +40,13 @@ def toggle_task(task_id):
             t["status"] = "Completed" if t["status"] == "Pending" else "Pending"
             flash(f"Toggled task: {t['title']}", "info")
             break
+    return redirect(url_for("index"))
+
+
+@app.route("/toggle_theme")
+def toggle_theme():
+    current_theme = session.get('theme', 'light')
+    session['theme'] = 'dark' if current_theme == 'light' else 'light'
     return redirect(url_for("index"))
 
 
@@ -72,7 +80,8 @@ def edit_task(task_id):
         return redirect(url_for('index'))
 
     # Render the main page but provide edit_task to show the edit form inline
-    return render_template('index.html', tasks=tasks, edit_task=task)
+    theme = session.get('theme', 'light')
+    return render_template('index.html', tasks=tasks, edit_task=task, theme=theme)
 
 
 if __name__ == "__main__":
