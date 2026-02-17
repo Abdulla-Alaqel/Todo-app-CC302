@@ -156,63 +156,107 @@
         </form>
 
         <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Tasks</h2>
+        
+        <!-- Bulk Actions Panel (Hidden by default) -->
+        <div id="bulk-actions-panel" class="hidden mb-4 p-4 bg-blue-50 dark:bg-blue-900 border border-blue-300 dark:border-blue-600 rounded-lg">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <span id="selected-count">0</span> task(s) selected
+              </span>
+            </div>
+            <button type="button" onclick="clearSelection()" 
+                    class="text-sm px-3 py-1 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-500">
+              Clear
+            </button>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2">
+            <button type="button" onclick="bulkComplete()"
+                    class="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-medium">
+              Mark Complete
+            </button>
+            <button type="button" onclick="bulkIncomplete()"
+                    class="px-3 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded text-sm font-medium">
+              Mark Pending
+            </button>
+            <button type="button" onclick="showPriorityDialog()"
+                    class="px-3 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded text-sm font-medium">
+              Change Priority
+            </button>
+            <button type="button" onclick="showTagsDialog()"
+                    class="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded text-sm font-medium">
+              Add Tags
+            </button>
+            <button type="button" onclick="bulkDelete()"
+                    class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-sm font-medium">
+              Delete
+            </button>
+          </div>
+        </div>
+        
         <div class="space-y-2">
           {% if tasks %}
             {% for t in tasks %}
-              <div class="flex items-start justify-between p-4 border border-gray-200 dark:border-gray-700 rounded bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition">
-                <div class="flex-1">
-                  <div class="flex items-center gap-3 mb-2">
-                    <div class="w-8 h-8 flex items-center justify-center rounded-full text-white text-sm font-semibold
-                                {% if t.status == 'Completed' %}bg-green-500{% elif t.priority == 'High' %}bg-red-500{% elif t.priority == 'Medium' %}bg-yellow-500{% else %}bg-blue-500{% endif %}">
-                      {{ t.id }}
-                    </div>
-                    <div class="flex-1">
-                      <div class="font-medium text-gray-900 dark:text-white {% if t.status == 'Completed' %}line-through text-gray-500 dark:text-gray-400{% endif %}">{{ t.title }}</div>
-                      <div class="text-xs mt-1 flex flex-wrap gap-2">
-                        <span class="px-2 py-1 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded">
-                          Status: <span class="font-semibold {% if t.status == 'Completed' %}text-green-600 dark:text-green-400{% else %}text-yellow-600 dark:text-yellow-400{% endif %}">{{ t.status }}</span>
-                        </span>
-                        <span class="px-2 py-1 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded">
-                          Priority: <span class="font-semibold">{{ t.priority }}</span>
-                        </span>
-                        {% if t.due_date %}
-                          <span class="px-2 py-1 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded">
-                            Due: {{ t.due_date.strftime('%Y-%m-%d %H:%M') }}
-                          </span>
-                        {% endif %}
-                        {% if t.tags %}
-                          {% for tag in t.tags.split(',') %}
-                            <span class="px-2 py-1 bg-purple-200 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded text-xs">{{ tag.strip() }}</span>
-                          {% endfor %}
-                        {% endif %}
+              <div class="flex items-start justify-between p-4 border border-gray-200 dark:border-gray-700 rounded bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition task-item" data-task-id="{{ t.id }}">
+                <!-- Checkbox for selection -->
+                <div class="flex items-start gap-3 flex-1">
+                  <input type="checkbox" class="task-checkbox mt-1 w-4 h-4 rounded border-gray-300 dark:border-gray-600" 
+                         data-task-id="{{ t.id }}" onchange="updateSelection()" />
+                  <div class="flex-1">
+                    <div class="flex items-center gap-3 mb-2">
+                      <div class="w-8 h-8 flex items-center justify-center rounded-full text-white text-sm font-semibold
+                                  {% if t.status == 'Completed' %}bg-green-500{% elif t.priority == 'High' %}bg-red-500{% elif t.priority == 'Medium' %}bg-yellow-500{% else %}bg-blue-500{% endif %}">
+                        {{ t.id }}
                       </div>
-                    </div>
-                  </div>
-                  
-                  <!-- Comments Section -->
-                  <div class="mt-4 border-t border-gray-200 dark:border-gray-600 pt-4">
-                    <div class="flex items-center justify-between mb-3">
-                      <button onclick="toggleComments({{ t.id }})" class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium flex items-center gap-1">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
-                        </svg>
-                        Comments (<span id="comment-count-{{ t.id }}">0</span>)
-                      </button>
+                      <div class="flex-1">
+                        <div class="font-medium text-gray-900 dark:text-white {% if t.status == 'Completed' %}line-through text-gray-500 dark:text-gray-400{% endif %}">{{ t.title }}</div>
+                        <div class="text-xs mt-1 flex flex-wrap gap-2">
+                          <span class="px-2 py-1 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded">
+                            Status: <span class="font-semibold {% if t.status == 'Completed' %}text-green-600 dark:text-green-400{% else %}text-yellow-600 dark:text-yellow-400{% endif %}">{{ t.status }}</span>
+                          </span>
+                          <span class="px-2 py-1 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded">
+                            Priority: <span class="font-semibold">{{ t.priority }}</span>
+                          </span>
+                          {% if t.due_date %}
+                            <span class="px-2 py-1 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded">
+                              Due: {{ t.due_date.strftime('%Y-%m-%d %H:%M') }}
+                            </span>
+                          {% endif %}
+                          {% if t.tags %}
+                            {% for tag in t.tags.split(',') %}
+                              <span class="px-2 py-1 bg-purple-200 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded text-xs">{{ tag.strip() }}</span>
+                            {% endfor %}
+                          {% endif %}
+                        </div>
+                      </div>
                     </div>
                     
-                    <div id="comments-{{ t.id }}" class="hidden space-y-3">
-                      <!-- Comments List -->
-                      <div id="comments-list-{{ t.id }}" class="space-y-2">
-                        <!-- Comments will be loaded here -->
+                    <!-- Comments Section -->
+                    <div class="mt-4 border-t border-gray-200 dark:border-gray-600 pt-4">
+                      <div class="flex items-center justify-between mb-3">
+                        <button onclick="toggleComments({{ t.id }})" class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium flex items-center gap-1">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                          </svg>
+                          Comments (<span id="comment-count-{{ t.id }}">0</span>)
+                        </button>
                       </div>
                       
-                      <!-- Add Comment Form -->
-                      <div class="border-t border-gray-200 dark:border-gray-600 pt-3">
-                        <form onsubmit="addComment(event, {{ t.id }})" class="flex gap-2">
-                          <input type="text" id="comment-input-{{ t.id }}" placeholder="Add a comment..." maxlength="1000"
-                                 class="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-300 dark:focus:ring-blue-500" />
-                          <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded">Add</button>
-                        </form>
+                      <div id="comments-{{ t.id }}" class="hidden space-y-3">
+                        <!-- Comments List -->
+                        <div id="comments-list-{{ t.id }}" class="space-y-2">
+                          <!-- Comments will be loaded here -->
+                        </div>
+                        
+                        <!-- Add Comment Form -->
+                        <div class="border-t border-gray-200 dark:border-gray-600 pt-3">
+                          <form onsubmit="addComment(event, {{ t.id }})" class="flex gap-2">
+                            <input type="text" id="comment-input-{{ t.id }}" placeholder="Add a comment..." maxlength="1000"
+                                   class="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-300 dark:focus:ring-blue-500" />
+                            <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded">Add</button>
+                          </form>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -228,7 +272,6 @@
           {% else %}
             <div class="text-center text-gray-500 dark:text-gray-400 py-12">No tasks yet — add your first task above.</div>
           {% endif %}
-        </div>
       </div>
     </div>
 
@@ -441,6 +484,109 @@
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+      }
+
+      // Bulk operations functionality
+      let selectedTaskIds = new Set();
+
+      function updateSelection() {
+        selectedTaskIds.clear();
+        document.querySelectorAll('.task-checkbox:checked').forEach(checkbox => {
+          selectedTaskIds.add(parseInt(checkbox.dataset.taskId));
+        });
+        
+        const panel = document.getElementById('bulk-actions-panel');
+        const count = document.getElementById('selected-count');
+        
+        count.textContent = selectedTaskIds.size;
+        
+        if (selectedTaskIds.size > 0) {
+          panel.classList.remove('hidden');
+        } else {
+          panel.classList.add('hidden');
+        }
+      }
+
+      function clearSelection() {
+        document.querySelectorAll('.task-checkbox:checked').forEach(checkbox => {
+          checkbox.checked = false;
+        });
+        updateSelection();
+      }
+
+      async function performBulkAction(action, actionData = {}) {
+        if (selectedTaskIds.size === 0) {
+          alert('Please select at least one task');
+          return;
+        }
+
+        try {
+          const response = await fetch('/api/bulk-update', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              task_ids: Array.from(selectedTaskIds),
+              action: action,
+              data: actionData
+            })
+          });
+
+          const result = await response.json();
+
+          if (response.ok) {
+            alert(result.message);
+            clearSelection();
+            // Reload page to reflect changes
+            location.reload();
+          } else {
+            alert('Error: ' + (result.error || 'Unknown error'));
+          }
+        } catch (error) {
+          console.error('Error performing bulk action:', error);
+          alert('Error performing bulk action');
+        }
+      }
+
+      function bulkComplete() {
+        if (confirm(`Mark ${selectedTaskIds.size} task(s) as complete?`)) {
+          performBulkAction('complete');
+        }
+      }
+
+      function bulkIncomplete() {
+        if (confirm(`Mark ${selectedTaskIds.size} task(s) as pending?`)) {
+          performBulkAction('incomplete');
+        }
+      }
+
+      function bulkDelete() {
+        if (confirm(`Delete ${selectedTaskIds.size} task(s)? This cannot be undone.`)) {
+          performBulkAction('delete');
+        }
+      }
+
+      function showPriorityDialog() {
+        const priority = prompt('Enter new priority (Low, Medium, High):', 'Medium');
+        if (priority && ['Low', 'Medium', 'High'].includes(priority)) {
+          if (confirm(`Change priority to '${priority}' for ${selectedTaskIds.size} task(s)?`)) {
+            performBulkAction('priority', { priority: priority });
+          }
+        } else if (priority !== null) {
+          alert('Invalid priority. Please enter Low, Medium, or High.');
+        }
+      }
+
+      function showTagsDialog() {
+        const tags = prompt('Enter tags (comma-separated):', '');
+        if (tags !== null && tags.trim()) {
+          const mode = confirm(`Append tags? (OK for append, Cancel to replace)`);
+          const tagMode = mode ? 'append' : 'replace';
+          if (confirm(`${tagMode.charAt(0).toUpperCase() + tagMode.slice(1)} tags for ${selectedTaskIds.size} task(s)?`)) {
+            performBulkAction('tags', { tags: tags, tag_mode: tagMode });
+          }
+        }
       }
     </script>
   </body>
