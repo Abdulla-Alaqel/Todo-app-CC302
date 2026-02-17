@@ -41,6 +41,28 @@ class Task(db.Model):
             'completed_at': self.completed_at.isoformat() if self.completed_at else None,
         }
 
+
+class Comment(db.Model):
+    __tablename__ = 'comments'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.Integer, db.ForeignKey('tasks.id'), nullable=False, index=True)
+    author_id = db.Column(db.Integer, nullable=True)  # Optional for now, can be used for user auth later
+    body = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=now_utc, index=True)
+    
+    # Relationship to task
+    task = db.relationship('Task', backref=db.backref('comments', lazy=True, order_by='Comment.created_at'))
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'task_id': self.task_id,
+            'author_id': self.author_id,
+            'body': self.body,
+            'created_at': self.created_at.isoformat(),
+        }
+
 # Create database tables
 with app.app_context():
     db.create_all()
@@ -158,6 +180,63 @@ def edit_task(task_id):
     theme = session.get('theme', 'light')
     tasks = Task.query.order_by(Task.created_at.desc()).all()
     return render_template('index.html', tasks=tasks, edit_task=task, theme=theme)
+
+
+# Comment endpoints
+@app.route('/api/comments/<int:task_id>', methods=['GET'])
+def get_comments(task_id):
+    task = Task.query.get(task_id)
+    if not task:
+        return jsonify({'error': 'Task not found'}), 404
+    
+    comments = Comment.query.filter_by(task_id=task_id).order_by(Comment.created_at).all()
+    return jsonify([comment.to_dict() for comment in comments])
+
+
+@app.route('/api/comments', methods=['POST'])
+def create_comment():
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+    
+    task_id = data.get('task_id')
+    body = data.get('body', '').strip()
+    
+    if not task_id or not body:
+        return jsonify({'error': 'Task ID and body are required'}), 400
+    
+    # Check if task exists
+    task = Task.query.get(task_id)
+    if not task:
+        return jsonify({'error': 'Task not found'}), 404
+    
+    # Basic validation and sanitation
+    if len(body) > 1000:  # Max length
+        return jsonify({'error': 'Comment body too long (max 1000 characters)'}), 400
+    
+    # Create comment (author_id is optional and null for now)
+    comment = Comment(
+        task_id=task_id,
+        author_id=data.get('author_id'),  # Optional
+        body=body
+    )
+    
+    db.session.add(comment)
+    db.session.commit()
+    
+    return jsonify(comment.to_dict()), 201
+
+
+@app.route('/api/comments/<int:comment_id>', methods=['DELETE'])
+def delete_comment(comment_id):
+    comment = Comment.query.get(comment_id)
+    if not comment:
+        return jsonify({'error': 'Comment not found'}), 404
+    
+    db.session.delete(comment)
+    db.session.commit()
+    
+    return jsonify({'message': 'Comment deleted'}), 200
 
 
 # Stats API Endpoints
