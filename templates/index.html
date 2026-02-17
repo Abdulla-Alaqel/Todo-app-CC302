@@ -1,84 +1,24 @@
 <!doctype html>
-<html lang="en" class="{% if theme == 'dark' %}dark{% endif %}">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Todo Dashboard</title>
+    <title>In-Memory Todo</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-      tailwind.config = {
-        darkMode: 'class'
-      }
-    </script>
   </head>
-  <body class="bg-gray-50 dark:bg-gray-900 min-h-screen p-6 relative">
-    <!-- Theme Toggle Button -->
-    <a href="{{ url_for('toggle_theme') }}" 
-       class="fixed top-4 right-4 z-10 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-full p-2 shadow-lg hover:shadow-xl transition-shadow">
-      {% if theme == 'dark' %}
-        <svg class="w-6 h-6 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
-          <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd" />
-        </svg>
-      {% else %}
-        <svg class="w-6 h-6 text-gray-800" fill="currentColor" viewBox="0 0 20 20">
-          <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
-        </svg>
-      {% endif %}
-    </a>
+  <body class="bg-gray-50 min-h-screen flex items-center justify-center p-6">
+    <div class="w-full max-w-2xl">
+      <div class="bg-white shadow rounded-lg p-6">
+        <h1 class="text-2xl font-semibold mb-4">To‑Do List</h1>
 
-    <div class="w-full max-w-6xl mx-auto">
-      <h1 class="text-4xl font-bold mb-8 text-gray-900 dark:text-white">Task Dashboard</h1>
-      
-      <!-- Stats Summary -->
-      <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-        <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-4">
-          <div class="text-2xl font-bold text-blue-600 dark:text-blue-400" id="stat-completed-today">-</div>
-          <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">Completed Today</div>
-        </div>
-        <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-4">
-          <div class="text-2xl font-bold text-green-600 dark:text-green-400" id="stat-completed-week">-</div>
-          <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">Completed This Week</div>
-        </div>
-        <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-4">
-          <div class="text-2xl font-bold text-red-600 dark:text-red-400" id="stat-overdue">-</div>
-          <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">Overdue</div>
-        </div>
-        <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-4">
-          <div class="text-2xl font-bold text-yellow-600 dark:text-yellow-400" id="stat-pending">-</div>
-          <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">Pending</div>
-        </div>
-        <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-4">
-          <div class="text-2xl font-bold text-violet-600 dark:text-violet-400" id="stat-total-completed">-</div>
-          <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">Total Done</div>
-        </div>
-      </div>
-
-      <!-- Charts Section -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        <!-- Completion Trend Chart -->
-        <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-          <h2 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Completion Trend (7 days)</h2>
-          <canvas id="trendChart"></canvas>
-        </div>
-
-        <!-- Priority Distribution -->
-        <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-          <h2 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Tasks by Priority</h2>
-          <canvas id="priorityChart"></canvas>
-        </div>
-      </div>
-
-      <!-- Main Content Area -->
-      <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
             <div class="space-y-2 mb-4">
               {% for category, msg in messages %}
                 <div class="px-4 py-2 rounded text-sm
-                            {% if category == 'success' %}bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200
-                            {% elif category == 'warning' %}bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200
-                            {% else %}bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200{% endif %}">
+                            {% if category == 'success' %}bg-green-100 text-green-800
+                            {% elif category == 'warning' %}bg-yellow-100 text-yellow-800
+                            {% else %}bg-blue-100 text-blue-800{% endif %}">
                   {{ msg }}
                 </div>
               {% endfor %}
@@ -87,74 +27,25 @@
         {% endwith %}
 
         {% if edit_task %}
-        <form action="{{ url_for('edit_task', task_id=edit_task.id) }}" method="post" class="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600">
-          <h3 class="font-semibold mb-4 text-gray-900 dark:text-white">Edit Task</h3>
-          <div class="space-y-3">
-            <div>
-              <label class="block text-sm text-gray-700 dark:text-gray-300 mb-1">Title</label>
-              <input name="title" value="{{ edit_task.title }}" required
-                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-300 dark:focus:ring-green-500" />
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="block text-sm text-gray-700 dark:text-gray-300 mb-1">Due Date</label>
-                <input name="due_date" type="datetime-local" value="{% if edit_task.due_date %}{{ edit_task.due_date.isoformat() }}{% endif %}"
-                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-300 dark:focus:ring-green-500" />
-              </div>
-              <div>
-                <label class="block text-sm text-gray-700 dark:text-gray-300 mb-1">Priority</label>
-                <select name="priority" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-300 dark:focus:ring-green-500">
-                  <option value="Low" {% if edit_task.priority == 'Low' %}selected{% endif %}>Low</option>
-                  <option value="Medium" {% if edit_task.priority == 'Medium' %}selected{% endif %}>Medium</option>
-                  <option value="High" {% if edit_task.priority == 'High' %}selected{% endif %}>High</option>
-                </select>
-              </div>
-            </div>
-            <div>
-              <label class="block text-sm text-gray-700 dark:text-gray-300 mb-1">Tags (comma-separated)</label>
-              <input name="tags" value="{{ edit_task.tags or '' }}" placeholder="e.g., work, urgent, bug"
-                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-300 dark:focus:ring-green-500" />
-            </div>
-            <div class="flex gap-2 pt-2">
-              <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">Save</button>
-              <a href="{{ url_for('index') }}" class="bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 text-gray-900 dark:text-white px-4 py-2 rounded">Cancel</a>
-            </div>
+        <form action="{{ url_for('edit_task', task_id=edit_task.id) }}" method="post" class="mb-6">
+          <div class="flex gap-2">
+            <input name="title" value="{{ edit_task.title }}" required
+                   class="flex-1 px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-green-300" />
+            <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded">Save</button>
+            <a href="{{ url_for('index') }}" class="bg-gray-100 px-4 py-2 rounded border">Cancel</a>
           </div>
         </form>
         {% endif %}
 
-        <form action="{{ url_for('add_task') }}" method="post" class="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600">
-          <h3 class="font-semibold mb-4 text-gray-900 dark:text-white">Add New Task</h3>
-          <div class="space-y-3">
-            <div>
-              <label class="block text-sm text-gray-700 dark:text-gray-300 mb-1">Title</label>
-              <input name="title" placeholder="What needs to be done?" required
-                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-500" />
-            </div>
-            <div class="grid grid-cols-3 gap-3">
-              <div>
-                <label class="block text-sm text-gray-700 dark:text-gray-300 mb-1">Due Date</label>
-                <input name="due_date" type="datetime-local"
-                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-500" />
-              </div>
-              <div>
-                <label class="block text-sm text-gray-700 dark:text-gray-300 mb-1">Priority</label>
-                <select name="priority" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-500">
-                  <option value="Low">Low</option>
-                  <option value="Medium" selected>Medium</option>
-                  <option value="High">High</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-sm text-gray-700 dark:text-gray-300 mb-1">Tags</label>
-                <input name="tags" placeholder="e.g., work, urgent" 
-                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-500" />
-              </div>
-            </div>
-            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded">Add Task</button>
+        <form action="{{ url_for('add_task') }}" method="post" class="mb-6">
+          <div class="flex gap-2">
+            <input name="title" placeholder="Add a new task..." required
+                   class="flex-1 px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+            <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded">Add</button>
           </div>
         </form>
 
+        <!-- Feature Branch Content: Stats, Bulk Actions, and Rich Task List -->
         <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Tasks</h2>
         
         <!-- Bulk Actions Panel (Hidden by default) -->
@@ -205,7 +96,7 @@
                          data-task-id="{{ t.id }}" onchange="updateSelection()" />
                   <div class="flex-1">
                     <div class="flex items-center gap-3 mb-2">
-                      <div class="w-8 h-8 flex items-center justify-center rounded-full text-white text-sm font-semibold
+                      <div class="w-8 h-8 flex items-center justify-center rounded-full text-white text-sm font-semibold 
                                   {% if t.status == 'Completed' %}bg-green-500{% elif t.priority == 'High' %}bg-red-500{% elif t.priority == 'Medium' %}bg-yellow-500{% else %}bg-blue-500{% endif %}">
                         {{ t.id }}
                       </div>
@@ -228,6 +119,11 @@
                               <span class="px-2 py-1 bg-purple-200 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded text-xs">{{ tag.strip() }}</span>
                             {% endfor %}
                           {% endif %}
+                          <!-- Integrated individual actions from Main logic, styled for Feature layout -->
+                          <span class="ml-auto flex gap-2">
+                            <a href="{{ url_for('edit_task', task_id=t.id) }}" class="text-blue-600 hover:text-blue-800">Edit</a>
+                            <a href="{{ url_for('delete_task', task_id=t.id) }}" class="text-red-600 hover:text-red-800">Delete</a>
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -261,20 +157,18 @@
                     </div>
                   </div>
                 </div>
-
-                <div class="flex items-center gap-2 ml-4 flex-shrink-0">
-                  <a href="{{ url_for('toggle_task', task_id=t.id) }}" class="text-sm px-3 py-1 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-500">{% if t.status == 'Completed' %}Undo{% else %}Complete{% endif %}</a>
-                  <a href="{{ url_for('edit_task', task_id=t.id) }}" class="text-sm px-3 py-1 rounded border border-blue-300 dark:border-blue-600 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900">Edit</a>
-                  <a href="{{ url_for('delete_task', task_id=t.id) }}" class="text-sm px-3 py-1 rounded border border-red-300 dark:border-red-600 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900">Delete</a>
-                </div>
               </div>
             {% endfor %}
           {% else %}
-            <div class="text-center text-gray-500 dark:text-gray-400 py-12">No tasks yet — add your first task above.</div>
+            <!-- From Main: Empty State -->
+            <div class="text-center text-gray-500 py-8">No tasks yet — add your first task above.</div>
           {% endif %}
+        </div>
       </div>
+      <p class="text-center text-xs text-gray-400 mt-3">In-memory demo — no database used.</p>
     </div>
 
+    <!-- Feature Branch Scripts -->
     <script>
       // Load and display stats
       async function loadStats() {
@@ -282,11 +176,13 @@
           const response = await fetch('/api/stats/summary');
           const data = await response.json();
           
-          document.getElementById('stat-completed-today').textContent = data.completed_today;
-          document.getElementById('stat-completed-week').textContent = data.completed_week;
-          document.getElementById('stat-overdue').textContent = data.overdue;
-          document.getElementById('stat-pending').textContent = data.total_pending;
-          document.getElementById('stat-total-completed').textContent = data.total_completed;
+          if(document.getElementById('stat-completed-today')) {
+             document.getElementById('stat-completed-today').textContent = data.completed_today;
+             document.getElementById('stat-completed-week').textContent = data.completed_week;
+             document.getElementById('stat-overdue').textContent = data.overdue;
+             document.getElementById('stat-pending').textContent = data.total_pending;
+             document.getElementById('stat-total-completed').textContent = data.total_completed;
+          }
         } catch (error) {
           console.error('Error loading stats:', error);
         }
@@ -294,6 +190,7 @@
 
       // Load and display completion trend chart
       async function loadTrendChart() {
+        if(!document.getElementById('trendChart')) return;
         try {
           const response = await fetch('/api/stats/completion-trend?days=7');
           const data = await response.json();
@@ -341,6 +238,7 @@
 
       // Load and display priority chart
       async function loadPriorityChart() {
+        if(!document.getElementById('priorityChart')) return;
         try {
           const response = await fetch('/api/stats/by-priority');
           const data = await response.json();
@@ -591,4 +489,3 @@
     </script>
   </body>
 </html>
-
