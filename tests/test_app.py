@@ -8,7 +8,7 @@ def client():
     """Create a test client for the Flask app."""
     app.config['TESTING'] = True
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
-    
+
     with app.app_context():
         db.create_all()
         yield app.test_client()
@@ -19,7 +19,7 @@ def client():
 def test_app_import():
     """Test that app imports successfully."""
     assert app is not None
-    assert app.config['TESTING'] is True
+    assert app.secret_key is not None
 
 
 def test_app_responds(client):
@@ -53,7 +53,7 @@ def test_task_model():
         task = Task(title='Test Task', status='Pending')
         db.session.add(task)
         db.session.commit()
-        
+
         retrieved = db.session.get(Task, task.id)
         assert retrieved is not None
         assert retrieved.title == 'Test Task'
