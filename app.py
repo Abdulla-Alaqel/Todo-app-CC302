@@ -1,8 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta, timezone
-from sqlalchemy import func, and_, or_
-import os
+from sqlalchemy import func, and_
 
 app = Flask(__name__)
 app.secret_key = "dev-secret-key"
@@ -12,9 +11,11 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///todos.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
+
 def now_utc():
     """Get current UTC time as timezone-aware datetime"""
     return datetime.now(timezone.utc)
+
 
 # Models
 class Task(db.Model):
@@ -62,6 +63,7 @@ class Comment(db.Model):
             'body': self.body,
             'created_at': self.created_at.isoformat(),
         }
+
 
 # Create database tables
 with app.app_context():
