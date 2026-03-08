@@ -39,13 +39,13 @@ def test_index_route_loads(client):
 
 def test_create_task_basic(client):
     """Test creating a task via POST /add.
-    
+
     AAA Pattern:
     - Arrange: Prepare form data
     - Act: POST to /add endpoint
     - Assert: Verify status and redirect
     """
-    # ARRANGE
+# ARRANGE
     form_data = {"title": "Buy milk"}
 
     # ACT
@@ -76,10 +76,10 @@ def test_create_task_with_priority_and_due_date(client):
 
 def test_create_multiple_tasks_and_verify_list(client):
     """Test creation of multiple tasks and verify they all appear in list.
-    
+
     This test demonstrates READ/VERIFY step.
     """
-    # ARRANGE
+# ARRANGE
     tasks_to_create = [
         {"title": "Task 1"},
         {"title": "Task 2"},
@@ -118,13 +118,13 @@ def test_create_empty_task_fails(client):
 
 def test_update_task_title(client):
     """Test updating a task's title via POST /edit/<id>.
-    
+
     AAA Pattern:
     - Arrange: Create a task, get its ID
     - Act: POST updated title to /edit/<id>
     - Assert: Verify updated content appears in list
     """
-    # ARRANGE - Create initial task
+# ARRANGE - Create initial task
     create_response = client.post(
         "/add",
         data={"title": "Old title"},
@@ -156,9 +156,9 @@ def test_update_task_title(client):
 
 def test_update_task_priority(client):
     """Test updating a task's priority."""
-    # ARRANGE
+# ARRANGE
     client.post("/add", data={"title": "Test task", "priority": "Low"}, follow_redirects=True)
-    
+
     with app.app_context():
         task = Task.query.filter_by(title="Test task").first()
         task_id = task.id
@@ -172,7 +172,7 @@ def test_update_task_priority(client):
 
     # ASSERT
     assert update_response.status_code == 200
-    
+
     # Verify priority was updated in database
     with app.app_context():
         updated_task = Task.query.get(task_id)
@@ -181,7 +181,7 @@ def test_update_task_priority(client):
 
 def test_update_nonexistent_task_fails(client):
     """Test that updating a non-existent task shows error."""
-    # ACT - Try to update task with ID that doesn't exist
+# ACT - Try to update task with ID that doesn't exist
     response = client.post(
         "/edit/999",
         data={"title": "Updated title"},
@@ -199,13 +199,13 @@ def test_update_nonexistent_task_fails(client):
 
 def test_delete_task(client):
     """Test deleting a task via GET /delete/<id>.
-    
+
     AAA Pattern:
     - Arrange: Create a task
     - Act: GET /delete/<id>
     - Assert: Verify task no longer appears in list
     """
-    # ARRANGE - Create a task
+# ARRANGE - Create a task
     create_response = client.post(
         "/add",
         data={"title": "To be deleted"},
@@ -225,7 +225,7 @@ def test_delete_task(client):
     assert delete_response.status_code == 200
     # Task should not appear in list anymore
     assert b"To be deleted" not in delete_response.data
-    
+
     # Double-check in database
     with app.app_context():
         deleted_task = Task.query.get(task_id)
@@ -234,7 +234,7 @@ def test_delete_task(client):
 
 def test_delete_task_leaves_others_intact(client):
     """Test that deleting one task doesn't affect others."""
-    # ARRANGE - Create multiple tasks
+# ARRANGE - Create multiple tasks
     client.post("/add", data={"title": "Keep this"}, follow_redirects=True)
     client.post("/add", data={"title": "Delete this"}, follow_redirects=True)
     client.post("/add", data={"title": "Keep this too"}, follow_redirects=True)
