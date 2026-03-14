@@ -52,7 +52,7 @@ def test_create_task_basic(client):
     response = client.post("/add", data=form_data, follow_redirects=True)
 
     # ASSERT - Status code check
-    assert response.status_code == 201
+    assert response.status_code == 200
     assert b"Buy milk" in response.data
 
 
