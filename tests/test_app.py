@@ -1,6 +1,6 @@
 """Test suite for ToDo app - CRUD Operations."""
 import pytest
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from app import app, db, Task
 
 
@@ -73,6 +73,30 @@ def test_create_task_with_priority_and_due_date(client):
     assert response.status_code == 200
     assert b"Complete assignment" in response.data
     assert b"High" in response.data
+
+
+def test_stats_summary_reports_streaks(client):
+    """Test that the stats summary endpoint returns the current and best streak."""
+    now = datetime.now(timezone.utc)
+    yesterday = now - timedelta(days=1)
+    two_days_ago = now - timedelta(days=2)
+    four_days_ago = now - timedelta(days=4)
+
+    with app.app_context():
+        db.session.add_all([
+            Task(title="Done today", status="Completed", completed_at=now),
+            Task(title="Done yesterday", status="Completed", completed_at=yesterday),
+            Task(title="Done two days ago", status="Completed", completed_at=two_days_ago),
+            Task(title="Done four days ago", status="Completed", completed_at=four_days_ago),
+        ])
+        db.session.commit()
+
+    response = client.get('/api/stats/summary')
+    assert response.status_code == 200
+
+    data = response.get_json()
+    assert data['current_streak'] == 3
+    assert data['best_streak'] == 3
 
 
 def test_create_recurring_task(client):

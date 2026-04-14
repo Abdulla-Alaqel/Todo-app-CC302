@@ -143,6 +143,41 @@ def calculate_next_due_date(current, recurrence_type, interval, recurrence_days)
     return None
 
 
+def compute_completion_streaks():
+    completed_dates = sorted({
+        completed.completed_at.date()
+        for completed in Task.query.filter(
+            and_(Task.status == "Completed", Task.completed_at != None)
+        ).all()
+    })
+
+    if not completed_dates:
+        return 0, 0
+
+    best_streak = 0
+    current_streak = 0
+    streak = 0
+    previous = None
+
+    for date in completed_dates:
+        if previous is None or date == previous + timedelta(days=1):
+            streak += 1
+        else:
+            streak = 1
+        best_streak = max(best_streak, streak)
+        previous = date
+
+    today = now_utc().date()
+    current_streak = 0
+    check_day = today
+    completed_set = set(completed_dates)
+    while check_day in completed_set:
+        current_streak += 1
+        check_day -= timedelta(days=1)
+
+    return current_streak, best_streak
+
+
 def create_next_recurrence(task):
     if not task.recurrence_type:
         return None
@@ -509,13 +544,16 @@ def stats_summary():
 
     total_pending = Task.query.filter(Task.status == "Pending").count()
     total_completed = Task.query.filter(Task.status == "Completed").count()
+    current_streak, best_streak = compute_completion_streaks()
 
     return jsonify({
         'completed_today': completed_today,
         'completed_week': completed_week,
         'overdue': overdue,
         'total_pending': total_pending,
-        'total_completed': total_completed
+        'total_completed': total_completed,
+        'current_streak': current_streak,
+        'best_streak': best_streak
     })
 
 
