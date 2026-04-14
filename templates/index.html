@@ -28,10 +28,17 @@
     </a>
 
     <div class="w-full max-w-6xl mx-auto">
-      <h1 class="text-4xl font-bold mb-8 text-gray-900 dark:text-white">Task Dashboard</h1>
-      
+      <h1 class="text-4xl font-bold mb-4 text-gray-900 dark:text-white">Task Dashboard</h1>
+      <div class="flex flex-wrap gap-3 mb-6">
+        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-sm font-semibold">
+          <span id="badge-current-streak">0</span> day streak
+        </div>
+        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-100 dark:bg-violet-900 text-violet-800 dark:text-violet-200 text-sm font-semibold">
+          Best: <span id="badge-best-streak">0</span>
+        </div>
+      </div>
       <!-- Stats Summary -->
-      <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+      <div class="grid grid-cols-2 md:grid-cols-7 gap-4 mb-8">
         <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-4">
           <div class="text-2xl font-bold text-blue-600 dark:text-blue-400" id="stat-completed-today">-</div>
           <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">Completed Today</div>
@@ -51,6 +58,14 @@
         <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-4">
           <div class="text-2xl font-bold text-violet-600 dark:text-violet-400" id="stat-total-completed">-</div>
           <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">Total Done</div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-4">
+          <div class="text-2xl font-bold text-indigo-600 dark:text-indigo-400" id="stat-current-streak">-</div>
+          <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">Current Streak</div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-4">
+          <div class="text-2xl font-bold text-pink-600 dark:text-pink-400" id="stat-best-streak">-</div>
+          <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">Best Streak</div>
         </div>
       </div>
 
@@ -370,6 +385,10 @@
           document.getElementById('stat-overdue').textContent = data.overdue;
           document.getElementById('stat-pending').textContent = data.total_pending;
           document.getElementById('stat-total-completed').textContent = data.total_completed;
+          document.getElementById('stat-current-streak').textContent = data.current_streak;
+          document.getElementById('stat-best-streak').textContent = data.best_streak;
+          document.getElementById('badge-current-streak').textContent = data.current_streak;
+          document.getElementById('badge-best-streak').textContent = data.best_streak;
         } catch (error) {
           console.error('Error loading stats:', error);
         }
