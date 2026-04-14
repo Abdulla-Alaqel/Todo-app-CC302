@@ -1,5 +1,6 @@
 """Test suite for ToDo app - CRUD Operations."""
 import pytest
+from datetime import timedelta
 from app import app, db, Task
 
 
@@ -72,6 +73,68 @@ def test_create_task_with_priority_and_due_date(client):
     assert response.status_code == 200
     assert b"Complete assignment" in response.data
     assert b"High" in response.data
+
+
+def test_create_recurring_task(client):
+    """Test creating a weekly recurring task."""
+    response = client.post(
+        "/add",
+        data={
+            "title": "Weekly report",
+            "due_date": "2025-01-06T09:00",
+            "priority": "Medium",
+            "tags": "work",
+            "recurrence_type": "weekly",
+            "recurrence_interval": "1",
+            "recurrence_days": ["Monday", "Wednesday"]
+        },
+        follow_redirects=True
+    )
+
+    assert response.status_code == 200
+    assert b"Weekly report" in response.data
+
+    with app.app_context():
+        task = Task.query.filter_by(title="Weekly report").first()
+        assert task is not None
+        assert task.recurrence_type == "weekly"
+        assert task.recurrence_interval == 1
+        assert task.recurrence_days == "Monday, Wednesday"
+
+
+def test_complete_recurring_task_generates_next_occurrence(client):
+    """Test that completing a recurring task creates the next instance."""
+    response = client.post(
+        "/add",
+        data={
+            "title": "Daily summary",
+            "due_date": "2025-01-01T09:00",
+            "recurrence_type": "daily",
+            "recurrence_interval": "1"
+        },
+        follow_redirects=True
+    )
+    assert response.status_code == 200
+
+    with app.app_context():
+        original = Task.query.filter_by(title="Daily summary", status="Pending").first()
+        assert original is not None
+        original_id = original.id
+        original_due = original.due_date
+
+    toggle_response = client.get(f"/toggle/{original_id}", follow_redirects=True)
+    assert toggle_response.status_code == 200
+    assert b"Toggled task" in toggle_response.data
+
+    with app.app_context():
+        new_task = Task.query.filter(
+            Task.title == "Daily summary",
+            Task.status == "Pending",
+            Task.id != original_id
+        ).first()
+        assert new_task is not None
+        assert new_task.recurrence_type == "daily"
+        assert new_task.due_date.date() == (original_due + timedelta(days=1)).date()
 
 
 def test_create_multiple_tasks_and_verify_list(client):

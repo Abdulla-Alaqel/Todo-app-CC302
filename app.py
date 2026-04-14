@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, and_
+import calendar
 
 app = Flask(__name__)
 app.secret_key = "dev-secret-key"
@@ -27,6 +28,9 @@ class Task(db.Model):
     due_date = db.Column(db.DateTime, nullable=True, index=True)
     priority = db.Column(db.String(50), nullable=False, default="Medium")  # Low, Medium, High
     tags = db.Column(db.String(255), nullable=True)  # Comma-separated
+    recurrence_type = db.Column(db.String(20), nullable=True, default=None)
+    recurrence_interval = db.Column(db.Integer, nullable=False, default=1)
+    recurrence_days = db.Column(db.String(100), nullable=True)  # Comma-separated weekday names for weekly recurrence
     created_at = db.Column(db.DateTime, nullable=False, default=now_utc, index=True)
     completed_at = db.Column(db.DateTime, nullable=True)
 
@@ -38,6 +42,9 @@ class Task(db.Model):
             'due_date': self.due_date.isoformat() if self.due_date else None,
             'priority': self.priority,
             'tags': self.tags,
+            'recurrence_type': self.recurrence_type,
+            'recurrence_interval': self.recurrence_interval,
+            'recurrence_days': self.recurrence_days,
             'created_at': self.created_at.isoformat(),
             'completed_at': self.completed_at.isoformat() if self.completed_at else None,
         }
@@ -65,6 +72,104 @@ class Comment(db.Model):
         }
 
 
+WEEKDAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+WEEKDAY_NAME_TO_INT = {name: idx for idx, name in enumerate(WEEKDAY_NAMES)}
+
+
+def normalize_recurrence_days(days):
+    if not days:
+        return None
+
+    if isinstance(days, str):
+        parts = [part.strip() for part in days.split(',') if part.strip()]
+    else:
+        parts = [part.strip() for part in days if part and part.strip()]
+
+    normalized = []
+    for part in parts:
+        title = part.capitalize()
+        if title in WEEKDAY_NAME_TO_INT:
+            normalized.append(title)
+        elif part.isdigit() and 0 <= int(part) <= 6:
+            normalized.append(WEEKDAY_NAMES[int(part)])
+
+    return ', '.join(dict.fromkeys(normalized)) if normalized else None
+
+
+def next_month_date(current, interval):
+    month = current.month - 1 + interval
+    year = current.year + month // 12
+    month = month % 12 + 1
+    day = min(current.day, calendar.monthrange(year, month)[1])
+    return current.replace(year=year, month=month, day=day)
+
+
+def calculate_next_due_date(current, recurrence_type, interval, recurrence_days):
+    if recurrence_type not in ['daily', 'weekly', 'monthly'] or interval < 1:
+        return None
+
+    if not current:
+        current = now_utc()
+
+    if recurrence_type == 'daily':
+        return current + timedelta(days=interval)
+
+    if recurrence_type == 'weekly':
+        day_names = normalize_recurrence_days(recurrence_days)
+        weekdays = [WEEKDAY_NAME_TO_INT[name] for name in day_names.split(', ') if name] if day_names else []
+        if not weekdays:
+            return current + timedelta(weeks=interval)
+
+        weekdays = sorted(set(weekdays))
+        later_days = [d for d in weekdays if d > current.weekday()]
+        if later_days:
+            next_weekday = later_days[0]
+            return current + timedelta(days=(next_weekday - current.weekday()))
+
+        if current.weekday() in weekdays:
+            weeks = interval
+        else:
+            weeks = 1
+
+        first_weekday = weekdays[0]
+        days_until_first = ((7 * weeks) - current.weekday() + first_weekday) % (7 * weeks)
+        if days_until_first == 0:
+            days_until_first = 7 * weeks
+        return current + timedelta(days=days_until_first)
+
+    if recurrence_type == 'monthly':
+        return next_month_date(current, interval)
+
+    return None
+
+
+def create_next_recurrence(task):
+    if not task.recurrence_type:
+        return None
+
+    next_due = calculate_next_due_date(
+        task.due_date or now_utc(),
+        task.recurrence_type,
+        task.recurrence_interval,
+        task.recurrence_days
+    )
+    if not next_due:
+        return None
+
+    recurring_task = Task(
+        title=task.title,
+        status='Pending',
+        due_date=next_due,
+        priority=task.priority,
+        tags=task.tags,
+        recurrence_type=task.recurrence_type,
+        recurrence_interval=task.recurrence_interval,
+        recurrence_days=task.recurrence_days
+    )
+    db.session.add(recurring_task)
+    return recurring_task
+
+
 # Create database tables
 with app.app_context():
     db.create_all()
@@ -83,6 +188,9 @@ def add_task():
     due_date_str = request.form.get("due_date", "").strip()
     priority = request.form.get("priority", "Medium")
     tags = request.form.get("tags", "").strip()
+    recurrence_type = request.form.get("recurrence_type", "").strip() or None
+    recurrence_interval = request.form.get("recurrence_interval", "1").strip()
+    recurrence_days = request.form.getlist("recurrence_days")
 
     if not title:
         flash("Task cannot be empty.", "warning")
@@ -96,12 +204,29 @@ def add_task():
             flash("Invalid due date format.", "warning")
             return redirect(url_for("index"))
 
+    try:
+        recurrence_interval = max(1, int(recurrence_interval))
+    except ValueError:
+        recurrence_interval = 1
+
+    recurrence_days = normalize_recurrence_days(recurrence_days)
+    if recurrence_type != 'weekly':
+        recurrence_days = None
+
+    if recurrence_type not in ['daily', 'weekly', 'monthly']:
+        recurrence_type = None
+        recurrence_interval = 1
+        recurrence_days = None
+
     new_task = Task(
         title=title,
         status="Pending",
         due_date=due_date,
         priority=priority,
-        tags=tags if tags else None
+        tags=tags if tags else None,
+        recurrence_type=recurrence_type,
+        recurrence_interval=recurrence_interval,
+        recurrence_days=recurrence_days
     )
     db.session.add(new_task)
     db.session.commit()
@@ -113,12 +238,17 @@ def add_task():
 def toggle_task(task_id):
     task = Task.query.get(task_id)
     if task:
-        task.status = "Completed" if task.status == "Pending" else "Pending"
+        was_pending = task.status == "Pending"
+        task.status = "Completed" if was_pending else "Pending"
         if task.status == "Completed":
             task.completed_at = now_utc()
+            db.session.commit()
+            if was_pending and task.recurrence_type:
+                create_next_recurrence(task)
+                db.session.commit()
         else:
             task.completed_at = None
-        db.session.commit()
+            db.session.commit()
         flash(f"Toggled task: {task.title}", "info")
     else:
         flash(f"Task #{task_id} not found", "warning")
@@ -164,6 +294,27 @@ def edit_task(task_id):
         task.title = title
         task.priority = priority
         task.tags = tags if tags else None
+        recurrence_type = request.form.get('recurrence_type', '').strip() or None
+        recurrence_interval = request.form.get('recurrence_interval', '1').strip()
+        recurrence_days = request.form.getlist('recurrence_days')
+
+        try:
+            recurrence_interval = max(1, int(recurrence_interval))
+        except ValueError:
+            recurrence_interval = 1
+
+        recurrence_days = normalize_recurrence_days(recurrence_days)
+        if recurrence_type != 'weekly':
+            recurrence_days = None
+
+        if recurrence_type not in ['daily', 'weekly', 'monthly']:
+            recurrence_type = None
+            recurrence_interval = 1
+            recurrence_days = None
+
+        task.recurrence_type = recurrence_type
+        task.recurrence_interval = recurrence_interval
+        task.recurrence_days = recurrence_days
 
         if due_date_str:
             try:

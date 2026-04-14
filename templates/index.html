@@ -111,6 +111,43 @@
               </div>
             </div>
             <div>
+              <label class="block text-sm text-gray-700 dark:text-gray-300 mb-1">Recurrence</label>
+              <div class="flex items-center gap-3 mb-2">
+                <input id="recurrenceEnabledEdit" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded" {% if edit_task.recurrence_type %}checked{% endif %} />
+                <label for="recurrenceEnabledEdit" class="text-sm text-gray-700 dark:text-gray-300">Enable recurrence</label>
+              </div>
+              <div id="recurrenceEditorEdit" class="space-y-3 p-3 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 {% if not edit_task.recurrence_type %}hidden{% endif %}">
+                <div class="grid grid-cols-3 gap-3">
+                  <div>
+                    <label class="block text-sm text-gray-700 dark:text-gray-300 mb-1">Type</label>
+                    <select id="recurrenceTypeEdit" name="recurrence_type" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-500">
+                      <option value="">None</option>
+                      <option value="daily" {% if edit_task.recurrence_type == 'daily' %}selected{% endif %}>Daily</option>
+                      <option value="weekly" {% if edit_task.recurrence_type == 'weekly' %}selected{% endif %}>Weekly</option>
+                      <option value="monthly" {% if edit_task.recurrence_type == 'monthly' %}selected{% endif %}>Monthly</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-sm text-gray-700 dark:text-gray-300 mb-1">Interval</label>
+                    <input id="recurrenceIntervalEdit" name="recurrence_interval" type="number" min="1" value="{{ edit_task.recurrence_interval or 1 }}"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-500" />
+                  </div>
+                  <div class="col-span-3" id="recurrenceDaysEditWrapper" {% if edit_task.recurrence_type != 'weekly' %}style="display:none;"{% endif %}>
+                    <label class="block text-sm text-gray-700 dark:text-gray-300 mb-1">Days of week</label>
+                    <div class="grid grid-cols-2 gap-2">
+                      {% for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] %}
+                        <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                          <input type="checkbox" name="recurrence_days" value="{{ day }}" {% if day in (edit_task.recurrence_days or '').split(', ') %}checked{% endif %}
+                                 class="h-4 w-4 text-indigo-600 border-gray-300 rounded" />
+                          {{ day[:3] }}
+                        </label>
+                      {% endfor %}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div>
               <label class="block text-sm text-gray-700 dark:text-gray-300 mb-1">Tags (comma-separated)</label>
               <input name="tags" value="{{ edit_task.tags or '' }}" placeholder="e.g., work, urgent, bug"
                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-300 dark:focus:ring-green-500" />
@@ -149,6 +186,42 @@
                 <label class="block text-sm text-gray-700 dark:text-gray-300 mb-1">Tags</label>
                 <input name="tags" placeholder="e.g., work, urgent" 
                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-500" />
+              </div>
+            </div>
+            <div>
+              <div class="flex items-center gap-3 mb-2">
+                <input id="recurrenceEnabledNew" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded" />
+                <label for="recurrenceEnabledNew" class="text-sm text-gray-700 dark:text-gray-300">Enable recurrence</label>
+              </div>
+              <div id="recurrenceEditorNew" class="space-y-3 p-3 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 hidden">
+                <div class="grid grid-cols-3 gap-3">
+                  <div>
+                    <label class="block text-sm text-gray-700 dark:text-gray-300 mb-1">Type</label>
+                    <select id="recurrenceTypeNew" name="recurrence_type" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-500">
+                      <option value="">None</option>
+                      <option value="daily">Daily</option>
+                      <option value="weekly">Weekly</option>
+                      <option value="monthly">Monthly</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-sm text-gray-700 dark:text-gray-300 mb-1">Interval</label>
+                    <input id="recurrenceIntervalNew" name="recurrence_interval" type="number" min="1" value="1"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-500" />
+                  </div>
+                  <div class="col-span-3" id="recurrenceDaysNewWrapper" style="display:none;">
+                    <label class="block text-sm text-gray-700 dark:text-gray-300 mb-1">Days of week</label>
+                    <div class="grid grid-cols-2 gap-2">
+                      {% for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] %}
+                        <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                          <input type="checkbox" name="recurrence_days" value="{{ day }}"
+                                 class="h-4 w-4 text-indigo-600 border-gray-300 rounded" />
+                          {{ day[:3] }}
+                        </label>
+                      {% endfor %}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
             <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded">Add Task</button>
@@ -221,6 +294,16 @@
                           {% if t.due_date %}
                             <span class="px-2 py-1 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded">
                               Due: {{ t.due_date.strftime('%Y-%m-%d %H:%M') }}
+                            </span>
+                          {% endif %}
+                          {% if t.recurrence_type %}
+                            <span class="px-2 py-1 bg-blue-200 dark:bg-blue-900 text-blue-700 dark:text-blue-200 rounded">
+                              Recurring: {{ t.recurrence_type.capitalize() }} every {{ t.recurrence_interval }}
+                              {% if t.recurrence_type == 'weekly' and t.recurrence_days %}
+                                on {{ t.recurrence_days }}
+                              {% elif t.recurrence_type == 'monthly' %}
+                                month(s)
+                              {% endif %}
                             </span>
                           {% endif %}
                           {% if t.tags %}
@@ -369,11 +452,43 @@
         }
       }
 
+      function setRecurrenceFieldsVisibility(prefix) {
+        const enabled = document.getElementById(`recurrenceEnabled${prefix}`);
+        const editor = document.getElementById(`recurrenceEditor${prefix}`);
+        const type = document.getElementById(`recurrenceType${prefix}`);
+        const weeklyWrapper = document.getElementById(`recurrenceDays${prefix}Wrapper`);
+
+        if (!editor || !enabled || !type || !weeklyWrapper) return;
+
+        if (enabled.checked) {
+          editor.classList.remove('hidden');
+        } else {
+          editor.classList.add('hidden');
+          type.value = '';
+          weeklyWrapper.style.display = 'none';
+          weeklyWrapper.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+          return;
+        }
+
+        weeklyWrapper.style.display = type.value === 'weekly' ? 'block' : 'none';
+      }
+
+      function attachRecurrenceControl(prefix) {
+        const enabled = document.getElementById(`recurrenceEnabled${prefix}`);
+        const type = document.getElementById(`recurrenceType${prefix}`);
+        if (!enabled || !type) return;
+
+        enabled.addEventListener('change', () => setRecurrenceFieldsVisibility(prefix));
+        type.addEventListener('change', () => setRecurrenceFieldsVisibility(prefix));
+      }
+
       // Initialize on page load
       document.addEventListener('DOMContentLoaded', () => {
         loadStats();
         loadTrendChart();
         loadPriorityChart();
+        attachRecurrenceControl('New');
+        attachRecurrenceControl('Edit');
       });
 
       // Comments functionality
