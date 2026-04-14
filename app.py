@@ -147,7 +147,7 @@ def compute_completion_streaks():
     completed_dates = sorted({
         completed.completed_at.date()
         for completed in Task.query.filter(
-            and_(Task.status == "Completed", Task.completed_at != None)
+            and_(Task.status == "Completed", Task.completed_at.isnot(None))
         ).all()
     })
 
