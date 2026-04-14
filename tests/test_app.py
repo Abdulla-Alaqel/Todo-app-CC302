@@ -127,7 +127,11 @@ def test_complete_recurring_task_generates_next_occurrence(client):
     assert b"Toggled task" in toggle_response.data
 
     with app.app_context():
-        new_task = Task.query.filter(Task.title == "Daily summary", Task.status == "Pending", Task.id != original_id).first()
+        new_task = Task.query.filter(
+            Task.title == "Daily summary",
+            Task.status == "Pending",
+            Task.id != original_id
+        ).first()
         assert new_task is not None
         assert new_task.recurrence_type == "daily"
         assert new_task.due_date.date() == (original_due + timedelta(days=1)).date()

@@ -147,7 +147,12 @@ def create_next_recurrence(task):
     if not task.recurrence_type:
         return None
 
-    next_due = calculate_next_due_date(task.due_date or now_utc(), task.recurrence_type, task.recurrence_interval, task.recurrence_days)
+    next_due = calculate_next_due_date(
+        task.due_date or now_utc(),
+        task.recurrence_type,
+        task.recurrence_interval,
+        task.recurrence_days
+    )
     if not next_due:
         return None
 
