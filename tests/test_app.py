@@ -1,5 +1,6 @@
 """Test suite for ToDo app - CRUD Operations."""
 import pytest
+from datetime import datetime, timedelta, timezone
 from app import app, db, Task
 
 
@@ -72,6 +73,162 @@ def test_create_task_with_priority_and_due_date(client):
     assert response.status_code == 200
     assert b"Complete assignment" in response.data
     assert b"High" in response.data
+
+
+def test_stats_summary_reports_streaks(client):
+    """Test that the stats summary endpoint returns the current and best streak."""
+    now = datetime.now(timezone.utc)
+    yesterday = now - timedelta(days=1)
+    two_days_ago = now - timedelta(days=2)
+    four_days_ago = now - timedelta(days=4)
+
+    with app.app_context():
+        db.session.add_all([
+            Task(title="Done today", status="Completed", completed_at=now),
+            Task(title="Done yesterday", status="Completed", completed_at=yesterday),
+            Task(title="Done two days ago", status="Completed", completed_at=two_days_ago),
+            Task(title="Done four days ago", status="Completed", completed_at=four_days_ago),
+        ])
+        db.session.commit()
+
+    response = client.get('/api/stats/summary')
+    assert response.status_code == 200
+
+    data = response.get_json()
+    assert data['current_streak'] == 3
+    assert data['best_streak'] == 3
+
+
+def test_create_recurring_task(client):
+    """Test creating a weekly recurring task."""
+    response = client.post(
+        "/add",
+        data={
+            "title": "Weekly report",
+            "due_date": "2025-01-06T09:00",
+            "priority": "Medium",
+            "tags": "work",
+            "recurrence_type": "weekly",
+            "recurrence_interval": "1",
+            "recurrence_days": ["Monday", "Wednesday"]
+        },
+        follow_redirects=True
+    )
+
+    assert response.status_code == 200
+    assert b"Weekly report" in response.data
+
+    with app.app_context():
+        task = Task.query.filter_by(title="Weekly report").first()
+        assert task is not None
+        assert task.recurrence_type == "weekly"
+        assert task.recurrence_interval == 1
+        assert task.recurrence_days == "Monday, Wednesday"
+
+
+def test_complete_recurring_task_generates_next_occurrence(client):
+    """Test that completing a recurring task creates the next instance."""
+    response = client.post(
+        "/add",
+        data={
+            "title": "Daily summary",
+            "due_date": "2025-01-01T09:00",
+            "recurrence_type": "daily",
+            "recurrence_interval": "1"
+        },
+        follow_redirects=True
+    )
+    assert response.status_code == 200
+
+    with app.app_context():
+        original = Task.query.filter_by(title="Daily summary", status="Pending").first()
+        assert original is not None
+        original_id = original.id
+        original_due = original.due_date
+
+    toggle_response = client.get(f"/toggle/{original_id}", follow_redirects=True)
+    assert toggle_response.status_code == 200
+    assert b"Toggled task" in toggle_response.data
+
+    with app.app_context():
+        new_task = Task.query.filter(
+            Task.title == "Daily summary",
+            Task.status == "Pending",
+            Task.id != original_id
+        ).first()
+        assert new_task is not None
+        assert new_task.recurrence_type == "daily"
+        assert new_task.due_date.date() == (original_due + timedelta(days=1)).date()
+
+
+def test_create_comment_for_task(client):
+    """Test creating a comment on an existing task."""
+    client.post("/add", data={"title": "Comment task"}, follow_redirects=True)
+    with app.app_context():
+        task = Task.query.filter_by(title="Comment task").first()
+        assert task is not None
+        task_id = task.id
+
+    response = client.post(
+        "/api/comments",
+        json={"task_id": task_id, "body": "This is a test comment"},
+    )
+    assert response.status_code == 201
+    data = response.get_json()
+    assert data["task_id"] == task_id
+    assert data["body"] == "This is a test comment"
+
+    response = client.get(f"/api/comments/{task_id}")
+    assert response.status_code == 200
+    comments = response.get_json()
+    assert isinstance(comments, list)
+    assert len(comments) == 1
+    assert comments[0]["body"] == "This is a test comment"
+
+
+def test_delete_comment(client):
+    """Test deleting a comment by ID."""
+    client.post("/add", data={"title": "Delete comment task"}, follow_redirects=True)
+    with app.app_context():
+        task = Task.query.filter_by(title="Delete comment task").first()
+        assert task is not None
+        task_id = task.id
+
+    response = client.post(
+        "/api/comments",
+        json={"task_id": task_id, "body": "Comment to delete"},
+    )
+    assert response.status_code == 201
+    comment_id = response.get_json()["id"]
+
+    delete_response = client.delete(f"/api/comments/{comment_id}")
+    assert delete_response.status_code == 200
+    assert delete_response.get_json()["message"] == "Comment deleted"
+
+    response = client.get(f"/api/comments/{task_id}")
+    assert response.status_code == 200
+    assert response.get_json() == []
+
+
+def test_create_comment_validation(client):
+    """Test comment validation for empty body and nonexistent task."""
+    client.post("/add", data={"title": "Validation task"}, follow_redirects=True)
+    with app.app_context():
+        task = Task.query.filter_by(title="Validation task").first()
+        assert task is not None
+        task_id = task.id
+
+    response = client.post(
+        "/api/comments",
+        json={"task_id": task_id, "body": ""},
+    )
+    assert response.status_code == 400
+
+    response = client.post(
+        "/api/comments",
+        json={"task_id": 9999, "body": "Should fail"},
+    )
+    assert response.status_code == 404
 
 
 def test_create_multiple_tasks_and_verify_list(client):
