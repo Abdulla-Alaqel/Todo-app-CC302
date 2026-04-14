@@ -161,6 +161,76 @@ def test_complete_recurring_task_generates_next_occurrence(client):
         assert new_task.due_date.date() == (original_due + timedelta(days=1)).date()
 
 
+def test_create_comment_for_task(client):
+    """Test creating a comment on an existing task."""
+    client.post("/add", data={"title": "Comment task"}, follow_redirects=True)
+    with app.app_context():
+        task = Task.query.filter_by(title="Comment task").first()
+        assert task is not None
+        task_id = task.id
+
+    response = client.post(
+        "/api/comments",
+        json={"task_id": task_id, "body": "This is a test comment"},
+    )
+    assert response.status_code == 201
+    data = response.get_json()
+    assert data["task_id"] == task_id
+    assert data["body"] == "This is a test comment"
+
+    response = client.get(f"/api/comments/{task_id}")
+    assert response.status_code == 200
+    comments = response.get_json()
+    assert isinstance(comments, list)
+    assert len(comments) == 1
+    assert comments[0]["body"] == "This is a test comment"
+
+
+def test_delete_comment(client):
+    """Test deleting a comment by ID."""
+    client.post("/add", data={"title": "Delete comment task"}, follow_redirects=True)
+    with app.app_context():
+        task = Task.query.filter_by(title="Delete comment task").first()
+        assert task is not None
+        task_id = task.id
+
+    response = client.post(
+        "/api/comments",
+        json={"task_id": task_id, "body": "Comment to delete"},
+    )
+    assert response.status_code == 201
+    comment_id = response.get_json()["id"]
+
+    delete_response = client.delete(f"/api/comments/{comment_id}")
+    assert delete_response.status_code == 200
+    assert delete_response.get_json()["message"] == "Comment deleted"
+
+    response = client.get(f"/api/comments/{task_id}")
+    assert response.status_code == 200
+    assert response.get_json() == []
+
+
+def test_create_comment_validation(client):
+    """Test comment validation for empty body and nonexistent task."""
+    client.post("/add", data={"title": "Validation task"}, follow_redirects=True)
+    with app.app_context():
+        task = Task.query.filter_by(title="Validation task").first()
+        assert task is not None
+        task_id = task.id
+
+    response = client.post(
+        "/api/comments",
+        json={"task_id": task_id, "body": ""},
+    )
+    assert response.status_code == 400
+
+    response = client.post(
+        "/api/comments",
+        json={"task_id": 9999, "body": "Should fail"},
+    )
+    assert response.status_code == 404
+
+
 def test_create_multiple_tasks_and_verify_list(client):
     """Test creation of multiple tasks and verify they all appear in list.
 
